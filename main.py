@@ -9,6 +9,6 @@ if __name__ == '__main__':
         run_game_against_engine()
     else:
         st = time.time()
-        test_engine_again_engine(10)
+        test_engine_again_engine(1000)
         et = time.time()
         print('Execution time: ', round(et-st,2))

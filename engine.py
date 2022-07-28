@@ -5,15 +5,52 @@ from functions import *
 
 class Node:
 
-    def __init__(self, evaluation):
-        self.key = evaluation
+    def __init__(self, evaluation, gamestate):
+        self.gamestate = gamestate
+        self.evaluation = evaluation
         self.child = []
 
 
 # Utility function to create a new tree node
-def newNode(key):
-    temp = Node(key)
+def newNode(evaluation, gamestate):
+    temp = Node(evaluation, gamestate)
     return temp
+
+
+def getEvalutionListofChildren(node):
+    output = list()
+    for x in node.child:
+        output.append(x.evaluation)
+    return output
+
+
+# Prints the n-ary tree level wise
+def levelOrderTraversal(root):
+    if (root == None):
+        return;
+
+    # Standard level order traversal code
+    # using queue
+    q = []  # Create a queue
+    q.append(root);  # Enqueue root
+    while (len(q) != 0):
+
+        n = len(q);
+
+        # If this node has children
+        while (n > 0):
+
+            # Dequeue an item from queue and print it
+            p = q[0]
+            q.pop(0);
+            print(p.evaluation, end=' ')
+
+            # Enqueue all children of the dequeued item
+            for i in range(len(p.child)):
+                q.append(p.child[i]);
+            n -= 1
+
+        print()  # Print new line between two levels
 
 
 def run_game_against_engine():
@@ -24,7 +61,7 @@ def run_game_against_engine():
         if game_state.p_to_move == 1:
             game_state = make_move(game_state)
         elif game_state.p_to_move == 2:
-            game_state = make_move(game_state, best_engine_move(game_state))
+            game_state = make_move(game_state, best_engine_move_tree(game_state))
             time.sleep(2)
         visualize(game_state)
         print('Positionsbewertung', evaluate_position(game_state.board))
@@ -42,9 +79,9 @@ def test_engine_again_engine(game_count):
         game_state = init()
         while red_won == 0 and blue_won == 0:
             if game_state.p_to_move == 1:
-                game_state = make_move(game_state, best_engine_move(game_state))
+                game_state = make_move(game_state, best_engine_move_tree(game_state))
             elif game_state.p_to_move == 2:
-                game_state = make_move(game_state, best_engine_move(game_state))
+                game_state = make_move(game_state, best_engine_move_tree(game_state))
             [red_won, blue_won] = check_for_win(game_state.board)
         red_won_count += red_won
         blue_won_count += blue_won
@@ -56,7 +93,7 @@ def evaluate_position(board):
     # Bewertungsschema: negativ ist besser für p2 (blau), positiv besser für p1(rot)
     # geht von -inf bis +inf (verloren), wenn eine figur mehr, dann +- 10
 
-    # TODO "Angegriffene" meiden (Wie auch immer das gehen soll :D)
+    # TODO "Angegriffene" Felder meiden (Wie auch immer das gehen soll :D)
     # TODO Anreiz für König schaffen, auf das Siegfeld zu kommen
 
     evaluation = 0
@@ -81,8 +118,8 @@ def evaluate_position(board):
         for j in range(5):
             if 'r' in board[i][j]:
                 evaluation += heatmap[i][j]
-            if 'b' in board[i][j]:
-                evaluation -= heatmap[i][j]
+            #if 'b' in board[i][j]:
+            #    evaluation -= heatmap[i][j]
 
     # König für Nähe zum Siegfeld belohnen
     bK_heatmap = np.array(
@@ -183,7 +220,53 @@ def best_engine_move(game_state):
                 max_list = [i]
             elif evluation_of_lvl1[i] == temp:
                 max_list.append(i)
-        return list_of_moves_lvl1[max_list[random.randint(0, len(max_list) - 1)]]
+        return list_of_moves_lvl1[max_list[(random.randint(1, len(max_list)) - 1)]]
+
+
+def best_engine_move_tree(game_state):
+    list_of_moves_lvl1 = get_all_possible_moves(game_state)
+    if not len(list_of_moves_lvl1):
+        print("No init moves")
+    root = Node(0, game_state)
+    for move in list_of_moves_lvl1:
+        # attach ojects to tree
+        (root.child).append(newNode(0, make_move(game_state, move)))
+    # levelOrderTraversal(root)
+    # lvl 2 errechenen und beste bewertung
+    for i in range(len(root.child) - 1):
+        list_of_moves_lvl2 = get_all_possible_moves(root.child[i].gamestate)
+        list_of_gamestates_lvl2 = list()
+        evluation_of_lvl2 = list()
+        for move in list_of_moves_lvl2:
+            (root.child[i].child).append(newNode(0, make_move(game_state, move)))
+        for j in range(len(root.child[i].child) - 1):
+            root.child[i].child[j].evaluation = evaluate_position(root.child[i].child[j].gamestate.board)
+        if game_state.p_to_move == 1 and len(root.child[i].child):  # wenn p1 dran, dann min für best möglichen blauen move | Falls kein move möglich, ignorieren TODO Fix this! Im spiel muss man trotzdem einen move tauschen
+            root.child[i].evaluation = (min(getEvalutionListofChildren(root.child[i])))
+        elif game_state.p_to_move == 2 and len(root.child[i].child):  # wenn p2 dran, dann max für best möglichen roten move
+            root.child[i].evaluation = (max(getEvalutionListofChildren(root.child[i])))
+
+    # besten move zurückgeben (random bei gleicher Bewertung)
+    if game_state.p_to_move == 1:  # p1 ist dran -> max suchen
+        temp = -math.inf
+        max_list = [0]  # falls alle einträge -inf sind, einfach den ersten nehmen
+        for i in range(0, len(root.child) - 1):
+            if root.child[i].evaluation > temp:
+                temp = root.child[i].evaluation
+                max_list = [i]
+            elif root.child[i].evaluation == temp:
+                max_list.append(i)
+        return list_of_moves_lvl1[max_list[(random.randint(1, len(max_list)) - 1)]]
+    else:  # p1 ist dran -> min suchen
+        temp = math.inf
+        max_list = [0]  # falls alle einträge -inf sind, einfach den ersten nehmen
+        for i in range(0, len(root.child) - 1):
+            if root.child[i].evaluation < temp:
+                temp = root.child[i].evaluation
+                max_list = [i]
+            elif root.child[i].evaluation == temp:
+                max_list.append(i)
+        return list_of_moves_lvl1[max_list[(random.randint(1, len(max_list)) - 1)]]
 
 
 def get_figure_position(board, player_no):
