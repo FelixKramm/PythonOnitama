@@ -174,77 +174,44 @@ def get_all_possible_moves(game_state):
     return list_of_possible_moves
 
 
-def best_engine_move(game_state):
+def add_depth_2_to_node(game_state, input_node):
     list_of_moves_lvl1 = get_all_possible_moves(game_state)
-    list_of_gamestates_lvl1 = list()
-    # root = AnyNode(id='root', previous_move=[], game_state=game_state)
     for move in list_of_moves_lvl1:
-        list_of_gamestates_lvl1.append(make_move(game_state, move))
-    # attach ojects to tree
-    # TODO
-
-    # lvl 2 errechenen und beste bewertung (für p1 bestimmen)
-    evluation_of_lvl1 = list()
-    for obj in list_of_gamestates_lvl1:
-        list_of_moves_lvl2 = get_all_possible_moves(obj)
-        list_of_gamestates_lvl2 = list()
-        evluation_of_lvl2 = list()
+        # attach ojects to tree
+        input_node.child.append(newNode(0, make_move(game_state, move)))
+    # lvl 2 errechenen und beste bewertung
+    for i in range(len(input_node.child) - 1):
+        list_of_moves_lvl2 = get_all_possible_moves(input_node.child[i].gamestate)
+        # lvl 2 alle nodes erstellen
         for move in list_of_moves_lvl2:
-            list_of_gamestates_lvl2.append(make_move(obj, move))
-        for obj2 in list_of_gamestates_lvl2:
-            evluation_of_lvl2.append(evaluate_position(obj2.board))
-        if game_state.p_to_move == 1 and len(
-                evluation_of_lvl2):  # wenn p1 dran, dann min für best möglichen blauen move | Falls kein move möglich, ignorieren TODO Fix this! Im spiel muss man trotzdem einen move tauschen
-            evluation_of_lvl1.append(min(evluation_of_lvl2))
-        elif game_state.p_to_move == 2 and len(
-                evluation_of_lvl2):  # wenn p2 dran, dann max für best möglichen roten move
-            evluation_of_lvl1.append(max(evluation_of_lvl2))
-
-    # besten move zurückgeben (random bei gleicher Bewertung)
-    if game_state.p_to_move == 1:  # p1 ist dran -> max suchen
-        temp = -math.inf
-        max_list = []
-        for i in range(0, len(evluation_of_lvl1) - 1):
-            if evluation_of_lvl1[i] > temp:
-                temp = evluation_of_lvl1[i]
-                max_list = [i]
-            elif evluation_of_lvl1[i] == temp:
-                max_list.append(i)
-        return list_of_moves_lvl1[max_list[random.randint(0, len(max_list) - 1)]]
-    else:  # p1 ist dran -> min suchen
-        temp = math.inf
-        max_list = []
-        for i in range(0, len(evluation_of_lvl1) - 1):
-            if evluation_of_lvl1[i] < temp:
-                temp = evluation_of_lvl1[i]
-                max_list = [i]
-            elif evluation_of_lvl1[i] == temp:
-                max_list.append(i)
-        return list_of_moves_lvl1[max_list[(random.randint(1, len(max_list)) - 1)]]
+            input_node.child[i].child.append(newNode(0, make_move(game_state, move)))
+        # alle nodes in lvl 2 bewerten
+        for j in range(len(input_node.child[i].child) - 1):
+            input_node.child[i].child[j].evaluation = evaluate_position(input_node.child[i].child[j].gamestate.board)
 
 
 def best_engine_move_tree(game_state):
     list_of_moves_lvl1 = get_all_possible_moves(game_state)
-    if not len(list_of_moves_lvl1):
-        print("No init moves")
     root = Node(0, game_state)
-    for move in list_of_moves_lvl1:
+    add_depth_2_to_node(game_state, root)
+    #list_of_moves_lvl1 = get_all_possible_moves(game_state)
+    #if not len(list_of_moves_lvl1):
+    #    print("No init moves")
+    #for move in list_of_moves_lvl1:
         # attach ojects to tree
-        (root.child).append(newNode(0, make_move(game_state, move)))
+    #    (root.child).append(newNode(0, make_move(game_state, move)))
     # levelOrderTraversal(root)
     # lvl 2 errechenen und beste bewertung
-    for i in range(len(root.child) - 1):
-        list_of_moves_lvl2 = get_all_possible_moves(root.child[i].gamestate)
-        list_of_gamestates_lvl2 = list()
-        evluation_of_lvl2 = list()
-        for move in list_of_moves_lvl2:
-            (root.child[i].child).append(newNode(0, make_move(game_state, move)))
-        for j in range(len(root.child[i].child) - 1):
-            root.child[i].child[j].evaluation = evaluate_position(root.child[i].child[j].gamestate.board)
-        if game_state.p_to_move == 1 and len(root.child[i].child):  # wenn p1 dran, dann min für best möglichen blauen move | Falls kein move möglich, ignorieren TODO Fix this! Im spiel muss man trotzdem einen move tauschen
-            root.child[i].evaluation = (min(getEvalutionListofChildren(root.child[i])))
-        elif game_state.p_to_move == 2 and len(root.child[i].child):  # wenn p2 dran, dann max für best möglichen roten move
-            root.child[i].evaluation = (max(getEvalutionListofChildren(root.child[i])))
+    #for i in range(len(root.child) - 1):
+    #    list_of_moves_lvl2 = get_all_possible_moves(root.child[i].gamestate)
+    #    for move in list_of_moves_lvl2:
+    #        (root.child[i].child).append(newNode(0, make_move(game_state, move)))
+    #    for j in range(len(root.child[i].child) - 1):
+    #        root.child[i].child[j].evaluation = evaluate_position(root.child[i].child[j].gamestate.board)
+    #if game_state.p_to_move == 1 and len(root.child[i].child):  # wenn p1 dran, dann min für best möglichen blauen move | Falls kein move möglich, ignorieren TODO Fix this! Im spiel muss man trotzdem einen move tauschen
+    #    root.child[i].evaluation = (min(getEvalutionListofChildren(root.child[i])))
+    #elif game_state.p_to_move == 2 and len(root.child[i].child):  # wenn p2 dran, dann max für best möglichen roten move
+    #    root.child[i].evaluation = (max(getEvalutionListofChildren(root.child[i])))
 
     # besten move zurückgeben (random bei gleicher Bewertung)
     if game_state.p_to_move == 1:  # p1 ist dran -> max suchen
