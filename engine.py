@@ -156,6 +156,7 @@ def get_all_possible_moves(game_state):
                 move_input2 = [2, int(piece[0]), int(piece[1]), int(piece[0]) + move2[0], int(piece[1]) + move2[1]]
                 if validate_move(game_state, move_input2):
                     list_of_possible_moves.append(move_input2)
+    # p2 to move
     elif game_state.p_to_move == 2:
         for piece in pieces:
             # Vorsicht, man muss moves für p2 invertrieren !!!
@@ -224,7 +225,7 @@ def best_engine_move_tree(game_state):
             elif root.child[i].evaluation == temp:
                 max_list.append(i)
         return list_of_moves_lvl1[max_list[(random.randint(1, len(max_list)) - 1)]]
-    else:  # p1 ist dran -> min suchen
+    else:  # p2 ist dran -> min suchen
         temp = math.inf
         max_list = [0]  # falls alle einträge -inf sind, einfach den ersten nehmen
         for i in range(0, len(root.child) - 1):
