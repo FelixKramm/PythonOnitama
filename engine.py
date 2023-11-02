@@ -73,7 +73,6 @@ def run_game_against_engine():
 def test_engine_again_engine(game_count):
     red_won_count = blue_won_count = 0
     for x in range(game_count):
-        os.system('CLS')
         print('Game_count: ', x)
         red_won = blue_won = 0
         game_state = init()
@@ -118,8 +117,8 @@ def evaluate_position(board):
         for j in range(5):
             if 'r' in board[i][j]:
                 evaluation += heatmap[i][j]
-            #if 'b' in board[i][j]:
-            #    evaluation -= heatmap[i][j]
+            if 'b' in board[i][j]:
+                evaluation -= heatmap[i][j]
 
     # König für Nähe zum Siegfeld belohnen
     bK_heatmap = np.array(
@@ -146,7 +145,7 @@ def get_all_possible_moves(game_state):
         for piece in pieces:
             # move 1
             for move in game_state.p1_move1.moves:
-                # get move input string
+                # get move input string [move_no, start_x, start_y,end_x,end_y]
                 move_input = [1, int(piece[0]), int(piece[1]), int(piece[0]) + move[0], int(piece[1]) + move[1]]
                 if validate_move(game_state, move_input):
                     list_of_possible_moves.append(move_input)
@@ -179,13 +178,13 @@ def add_depth_2_to_node(game_state, input_node):
     list_of_moves_lvl1 = get_all_possible_moves(game_state)
     for move in list_of_moves_lvl1:
         # attach ojects to tree
-        input_node.child.append(newNode(0, make_move(game_state, move)))
+        input_node.child.append(newNode(0, make_move(input_node.gamestate, move)))
     # lvl 2 errechenen und beste bewertung
     for i in range(len(input_node.child) - 1):
         list_of_moves_lvl2 = get_all_possible_moves(input_node.child[i].gamestate)
         # lvl 2 alle nodes erstellen
         for move in list_of_moves_lvl2:
-            input_node.child[i].child.append(newNode(0, make_move(game_state, move)))
+            input_node.child[i].child.append(newNode(0, make_move(input_node.child[i].gamestate, move)))
         # alle nodes in lvl 2 bewerten
         for j in range(len(input_node.child[i].child) - 1):
             input_node.child[i].child[j].evaluation = evaluate_position(input_node.child[i].child[j].gamestate.board)
@@ -195,30 +194,22 @@ def best_engine_move_tree(game_state):
     list_of_moves_lvl1 = get_all_possible_moves(game_state)
     root = Node(0, game_state)
     add_depth_2_to_node(game_state, root)
-    #list_of_moves_lvl1 = get_all_possible_moves(game_state)
-    #if not len(list_of_moves_lvl1):
-    #    print("No init moves")
-    #for move in list_of_moves_lvl1:
-        # attach ojects to tree
-    #    (root.child).append(newNode(0, make_move(game_state, move)))
-    # levelOrderTraversal(root)
-    # lvl 2 errechenen und beste bewertung
-    #for i in range(len(root.child) - 1):
-    #    list_of_moves_lvl2 = get_all_possible_moves(root.child[i].gamestate)
-    #    for move in list_of_moves_lvl2:
-    #        (root.child[i].child).append(newNode(0, make_move(game_state, move)))
-    #    for j in range(len(root.child[i].child) - 1):
-    #        root.child[i].child[j].evaluation = evaluate_position(root.child[i].child[j].gamestate.board)
-    #if game_state.p_to_move == 1 and len(root.child[i].child):  # wenn p1 dran, dann min für best möglichen blauen move | Falls kein move möglich, ignorieren TODO Fix this! Im spiel muss man trotzdem einen move tauschen
-    #    root.child[i].evaluation = (min(getEvalutionListofChildren(root.child[i])))
-    #elif game_state.p_to_move == 2 and len(root.child[i].child):  # wenn p2 dran, dann max für best möglichen roten move
-    #    root.child[i].evaluation = (max(getEvalutionListofChildren(root.child[i])))
+
+    # ToDo: Richtige Suchalgorithmen für Bäume anwenden und nicht einfach alles durchiterieren
+
+    # Hardcoded such nach bestem Zug
+    #Beste Bewertung aus alle children (Tiefe 2) als Bewertung für eigene Moves eintragen (children tiefe 1) -> Bester Move des gegners wird als Bewertung eingetragen
+
+
+    for i in range(0, len(root.child) - 1):
+        root.child[i].evaluation = get_node_evalation(game_state, root.child[i])
+
 
     # besten move zurückgeben (random bei gleicher Bewertung)
     if game_state.p_to_move == 1:  # p1 ist dran -> max suchen
         temp = -math.inf
-        max_list = [0]  # falls alle einträge -inf sind, einfach den ersten nehmen
-        for i in range(0, len(root.child) - 1):
+        max_list = [0]  # falls alle einträge -inf sind, einfach random einen wählen
+        for i in range(0, len(root.child) - 1): #erste Ebene iteration
             if root.child[i].evaluation > temp:
                 temp = root.child[i].evaluation
                 max_list = [i]
@@ -228,13 +219,28 @@ def best_engine_move_tree(game_state):
     else:  # p2 ist dran -> min suchen
         temp = math.inf
         max_list = [0]  # falls alle einträge -inf sind, einfach den ersten nehmen
-        for i in range(0, len(root.child) - 1):
-            if root.child[i].evaluation < temp:
-                temp = root.child[i].evaluation
-                max_list = [i]
-            elif root.child[i].evaluation == temp:
-                max_list.append(i)
+        for i in range(0, len(root.child) - 1): #erste Ebene iteration
+                if root.child[i].evaluation < temp:
+                    temp = root.child[i].evaluation
+                    max_list = [i]
+                elif root.child[i].evaluation == temp:
+                    max_list.append(i)
         return list_of_moves_lvl1[max_list[(random.randint(1, len(max_list)) - 1)]]
+
+# Methode um einer Node die beste (größte oder kleinste) Bewertung all seiner children zuzuordnen
+# vorsicht, hier muss muss der beste Move für den gegner gefunden werden
+def get_node_evalation(game_state, node):
+    if game_state.p_to_move == 1:  # p2 hat gezogen -> min suchen
+        evaluation = math.inf
+        for i in range(0, len(node.child) - 1):
+            if node.child[i].evaluation < evaluation:
+                evaluation = node.child[i].evaluation
+    else:  # p1 hat gezogen -> max suchen
+        evaluation = -math.inf
+        for i in range(0, len(node.child) - 1):  # erste Ebene iteration
+            if node.child[i].evaluation > evaluation:
+                evaluation = node.child[i].evaluation
+    return evaluation
 
 
 def get_figure_position(board, player_no):

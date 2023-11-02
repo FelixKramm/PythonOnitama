@@ -3,7 +3,9 @@ import os
 import math
 import time
 import numpy as np
+
 from moves_libary import *
+
 
 class Gamestate():
     def __init__(self, p1_move1, p1_move2, p2_move1, p2_move2, stack, board, p_to_move):
@@ -22,11 +24,9 @@ def init():
          ['  ', '  ', '  ', '  ', '  '], ['rp', 'rp', 'rK', 'rp', 'rp']])
 
     [move1, move2, move3, move4, move5] = get_moveset()
-    p_to_move = math.ceil(2*np.random.rand(1,1))
+    p_to_move = math.ceil(2 * np.random.rand(1, 1))  # random Startspieler auswählen
     game_state = Gamestate(move1, move2, move4, move5, move3, default_board, p_to_move)
     return game_state
-
-
 
 
 def check_for_win(board):
@@ -208,7 +208,6 @@ def create_move_grafic(game_state):
         color = 'red'
     else:
         color = 'blue'
-
     print()
     print('Player ', game_state.p_to_move, '(', color, ')', ' is on the move!')
     print('Your moves: ')
